@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 /**
  * Todo Interface
@@ -12,10 +12,41 @@ interface Todo {
   completed: boolean;
 }
 
+const STORAGE_KEY = "ai-todo-calendar-todos";
+
 export default function TodosPage() {
-  // State to store todos (in-memory for now, no database)
+  // State to store todos (persisted in localStorage)
   const [todos, setTodos] = useState<Todo[]>([]);
   const [inputValue, setInputValue] = useState("");
+
+  /**
+   * Load todos from localStorage on mount
+   */
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const savedTodos = localStorage.getItem(STORAGE_KEY);
+        if (savedTodos) {
+          setTodos(JSON.parse(savedTodos));
+        }
+      } catch (error) {
+        console.error("Failed to load todos from localStorage:", error);
+      }
+    }
+  }, []);
+
+  /**
+   * Save todos to localStorage whenever they change
+   */
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+      } catch (error) {
+        console.error("Failed to save todos to localStorage:", error);
+      }
+    }
+  }, [todos]);
 
   /**
    * Add a new todo

@@ -8,12 +8,13 @@
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import { DateClickArg } from "@fullcalendar/interaction";
 
 export default function CalendarPage() {
   /**
    * Handle date click (placeholder for future functionality)
    */
-  const handleDateClick = (arg: any) => {
+  const handleDateClick = (arg: DateClickArg) => {
     console.log("Date clicked:", arg.dateStr);
   };
 
