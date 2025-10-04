@@ -1,4 +1,5 @@
-import { useDroppable } from "@dnd-kit/core";
+import { useDroppable, useDraggable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 
 interface Todo {
@@ -18,6 +19,44 @@ interface WeeklyCalendarProps {
 interface DayCardProps {
   date: Date;
   todos: Todo[];
+}
+
+interface CalendarTodoItemProps {
+  todo: Todo;
+}
+
+function CalendarTodoItem({ todo }: CalendarTodoItemProps) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } =
+    useDraggable({
+      id: `todo-${todo.id}`,
+      data: { todo },
+    });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className={`
+        text-xs p-2 rounded border cursor-grab active:cursor-grabbing
+        ${todo.completed
+          ? "bg-gray-50 border-gray-200 line-through text-gray-400"
+          : "bg-blue-50 border-blue-200 text-blue-900"
+        }
+        ${isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}
+      `}
+    >
+      {todo.title.length > 20
+        ? `${todo.title.substring(0, 20)}...`
+        : todo.title}
+    </div>
+  );
 }
 
 function DayCard({ date, todos }: DayCardProps) {
@@ -52,20 +91,7 @@ function DayCard({ date, todos }: DayCardProps) {
 
       <div className="space-y-1">
         {todosForDay.map((todo) => (
-          <div
-            key={todo.id}
-            className={`
-              text-xs p-2 rounded border
-              ${todo.completed
-                ? "bg-gray-50 border-gray-200 line-through text-gray-400"
-                : "bg-blue-50 border-blue-200 text-blue-900"
-              }
-            `}
-          >
-            {todo.title.length > 20
-              ? `${todo.title.substring(0, 20)}...`
-              : todo.title}
-          </div>
+          <CalendarTodoItem key={todo.id} todo={todo} />
         ))}
         {todosForDay.length === 0 && (
           <div className="text-xs text-gray-300 text-center py-2">

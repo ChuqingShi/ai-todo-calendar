@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DndContext, DragEndEvent } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
 import { startOfWeek } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import DraggableTodoItem from "@/components/DraggableTodoItem";
@@ -100,13 +100,23 @@ export default function TodosPage() {
     if (!over) return;
 
     const todoId = parseInt(active.id.toString().replace("todo-", ""));
-    const newDeadline = over.id.toString();
+    const dropTarget = over.id.toString();
 
-    setTodos(
-      todos.map((todo) =>
-        todo.id === todoId ? { ...todo, deadline: newDeadline } : todo
-      )
-    );
+    // If dropped on unscheduled zone, remove deadline
+    if (dropTarget === "unscheduled") {
+      setTodos(
+        todos.map((todo) =>
+          todo.id === todoId ? { ...todo, deadline: undefined } : todo
+        )
+      );
+    } else {
+      // Otherwise set the deadline to the date
+      setTodos(
+        todos.map((todo) =>
+          todo.id === todoId ? { ...todo, deadline: dropTarget } : todo
+        )
+      );
+    }
   };
 
   /**
@@ -125,6 +135,37 @@ export default function TodosPage() {
 
   // Separate todos into unscheduled and scheduled
   const unscheduledTodos = todos.filter((todo) => !todo.deadline);
+
+  // Droppable zone for unscheduled todos
+  const UnscheduledDropZone = () => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: "unscheduled",
+    });
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`space-y-2 min-h-32 p-4 rounded-lg transition-all ${
+          isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
+        }`}
+      >
+        {unscheduledTodos.length === 0 ? (
+          <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
+            No unscheduled todos. Drag todos from the calendar to unschedule them.
+          </p>
+        ) : (
+          unscheduledTodos.map((todo) => (
+            <DraggableTodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+            />
+          ))
+        )}
+      </div>
+    );
+  };
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
@@ -155,22 +196,7 @@ export default function TodosPage() {
           <h3 className="text-lg font-semibold text-gray-700 mb-3">
             Unscheduled Todos ({unscheduledTodos.length})
           </h3>
-          <div className="space-y-2">
-            {unscheduledTodos.length === 0 ? (
-              <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
-                No unscheduled todos. Drag todos from the calendar to unschedule them.
-              </p>
-            ) : (
-              unscheduledTodos.map((todo) => (
-                <DraggableTodoItem
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={toggleTodo}
-                  onDelete={deleteTodo}
-                />
-              ))
-            )}
-          </div>
+          <UnscheduledDropZone />
         </div>
 
         {/* Weekly Calendar Section */}
