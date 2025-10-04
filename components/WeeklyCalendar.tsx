@@ -1,4 +1,6 @@
-import { useDroppable, useDraggable } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
+import { useSortable } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format, startOfWeek, addDays, isSameDay, parseISO } from "date-fns";
 
@@ -7,6 +9,7 @@ interface Todo {
   title: string;
   completed: boolean;
   deadline?: string;
+  order: number;
 }
 
 interface WeeklyCalendarProps {
@@ -26,14 +29,21 @@ interface CalendarTodoItemProps {
 }
 
 function CalendarTodoItem({ todo }: CalendarTodoItemProps) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
-    useDraggable({
-      id: `todo-${todo.id}`,
-      data: { todo },
-    });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: `todo-${todo.id}`,
+    data: { todo },
+  });
 
   const style = {
-    transform: CSS.Translate.toString(transform),
+    transform: CSS.Transform.toString(transform),
+    transition,
     opacity: isDragging ? 0.5 : 1,
   };
 
@@ -65,9 +75,9 @@ function DayCard({ date, todos }: DayCardProps) {
     id: dateStr,
   });
 
-  const todosForDay = todos.filter(
-    (todo) => todo.deadline === dateStr
-  );
+  const todosForDay = todos
+    .filter((todo) => todo.deadline === dateStr)
+    .sort((a, b) => a.order - b.order);
 
   const isToday = isSameDay(date, new Date());
 
@@ -80,7 +90,7 @@ function DayCard({ date, todos }: DayCardProps) {
         ${isToday ? "ring-2 ring-blue-300" : ""}
       `}
     >
-      <div className="text-center mb-2">
+      <div className="text-center mb-2 pointer-events-none">
         <div className="text-xs font-semibold text-gray-600 uppercase">
           {format(date, "EEE")}
         </div>
@@ -89,16 +99,21 @@ function DayCard({ date, todos }: DayCardProps) {
         </div>
       </div>
 
-      <div className="space-y-1">
-        {todosForDay.map((todo) => (
-          <CalendarTodoItem key={todo.id} todo={todo} />
-        ))}
-        {todosForDay.length === 0 && (
-          <div className="text-xs text-gray-300 text-center py-2">
-            Drop here
-          </div>
-        )}
-      </div>
+      <SortableContext
+        items={todosForDay.map((todo) => `todo-${todo.id}`)}
+        strategy={verticalListSortingStrategy}
+      >
+        <div className="space-y-1 pointer-events-auto">
+          {todosForDay.map((todo) => (
+            <CalendarTodoItem key={todo.id} todo={todo} />
+          ))}
+          {todosForDay.length === 0 && (
+            <div className="text-xs text-gray-300 text-center py-2 pointer-events-none">
+              Drop here
+            </div>
+          )}
+        </div>
+      </SortableContext>
     </div>
   );
 }

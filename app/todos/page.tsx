@@ -1,20 +1,23 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { DndContext, DragEndEvent, useDroppable } from "@dnd-kit/core";
+import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
+import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { startOfWeek } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import DraggableTodoItem from "@/components/DraggableTodoItem";
+import SortableTodoItem from "@/components/SortableTodoItem";
 
 /**
  * Todo Interface
- * Each todo has an id, title, completed status, and optional deadline
+ * Each todo has an id, title, completed status, optional deadline, and order
  */
 interface Todo {
   id: number;
   title: string;
   completed: boolean;
   deadline?: string; // ISO date string (YYYY-MM-DD)
+  order: number; // For manual ordering
 }
 
 const STORAGE_KEY = "ai-todo-calendar-todos";
@@ -35,7 +38,13 @@ export default function TodosPage() {
       try {
         const savedTodos = localStorage.getItem(STORAGE_KEY);
         if (savedTodos) {
-          setTodos(JSON.parse(savedTodos));
+          const parsed = JSON.parse(savedTodos);
+          // Add order field to old todos that don't have it
+          const todosWithOrder = parsed.map((todo: Todo, index: number) => ({
+            ...todo,
+            order: todo.order !== undefined ? todo.order : index,
+          }));
+          setTodos(todosWithOrder);
         }
       } catch (error) {
         console.error("Failed to load todos from localStorage:", error);
@@ -67,6 +76,7 @@ export default function TodosPage() {
       id: Date.now(), // Simple unique ID generator
       title: inputValue,
       completed: false,
+      order: todos.length, // Add to end
     };
 
     setTodos([...todos, newTodo]);
@@ -92,15 +102,51 @@ export default function TodosPage() {
   };
 
   /**
-   * Handle drag end - update todo deadline
+   * Handle drag end - update todo deadline or reorder
    */
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
     if (!over) return;
 
-    const todoId = parseInt(active.id.toString().replace("todo-", ""));
-    const dropTarget = over.id.toString();
+    const activeId = active.id.toString();
+    const overId = over.id.toString();
+
+    const activeTodoId = parseInt(activeId.replace("todo-", ""));
+    const overTodoId = parseInt(overId.replace("todo-", ""));
+
+    const activeTodo = todos.find((t) => t.id === activeTodoId);
+    const overTodo = todos.find((t) => t.id === overTodoId);
+
+    // Check if this is a same-day reordering operation (both todos have same deadline)
+    if (activeTodo && overTodo && activeTodo.deadline === overTodo.deadline) {
+      const todoList = activeTodo.deadline
+        ? todos.filter((t) => t.deadline === activeTodo.deadline).sort((a, b) => a.order - b.order)
+        : unscheduledTodos;
+
+      const oldIndex = todoList.findIndex((t) => t.id === activeTodoId);
+      const newIndex = todoList.findIndex((t) => t.id === overTodoId);
+
+      if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
+        const reordered = arrayMove(todoList, oldIndex, newIndex);
+
+        // Update order values
+        const updatedTodos = todos.map((todo) => {
+          const newPos = reordered.findIndex((t) => t.id === todo.id);
+          if (newPos !== -1) {
+            return { ...todo, order: newPos };
+          }
+          return todo;
+        });
+
+        setTodos(updatedTodos);
+        return;
+      }
+    }
+
+    // Handle calendar drop (setting deadline)
+    const todoId = activeTodoId;
+    const dropTarget = overId;
 
     // If dropped on unscheduled zone, remove deadline
     if (dropTarget === "unscheduled") {
@@ -109,11 +155,17 @@ export default function TodosPage() {
           todo.id === todoId ? { ...todo, deadline: undefined } : todo
         )
       );
-    } else {
-      // Otherwise set the deadline to the date
+    } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Otherwise set the deadline to the date (if it's a valid date format)
+      const targetDayTodos = todos
+        .filter((t) => t.deadline === dropTarget)
+        .sort((a, b) => a.order - b.order);
+
       setTodos(
         todos.map((todo) =>
-          todo.id === todoId ? { ...todo, deadline: dropTarget } : todo
+          todo.id === todoId
+            ? { ...todo, deadline: dropTarget, order: targetDayTodos.length }
+            : todo
         )
       );
     }
@@ -133,8 +185,10 @@ export default function TodosPage() {
     setCurrentWeekStart((prev) => new Date(prev.getTime() + 7 * 24 * 60 * 60 * 1000));
   };
 
-  // Separate todos into unscheduled and scheduled
-  const unscheduledTodos = todos.filter((todo) => !todo.deadline);
+  // Separate todos into unscheduled and scheduled, sorted by order
+  const unscheduledTodos = todos
+    .filter((todo) => !todo.deadline)
+    .sort((a, b) => a.order - b.order);
 
   // Droppable zone for unscheduled todos
   const UnscheduledDropZone = () => {
@@ -145,30 +199,35 @@ export default function TodosPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`space-y-2 min-h-32 p-4 rounded-lg transition-all ${
+        className={`min-h-32 p-4 rounded-lg transition-all ${
           isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
         }`}
       >
-        {unscheduledTodos.length === 0 ? (
-          <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
-            No unscheduled todos. Drag todos from the calendar to unschedule them.
-          </p>
-        ) : (
-          unscheduledTodos.map((todo) => (
-            <DraggableTodoItem
-              key={todo.id}
-              todo={todo}
-              onToggle={toggleTodo}
-              onDelete={deleteTodo}
-            />
-          ))
-        )}
+        <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
+          Unscheduled Todos ({unscheduledTodos.length})
+        </h3>
+        <div className="space-y-2 pointer-events-auto">
+          {unscheduledTodos.length === 0 ? (
+            <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
+              No unscheduled todos. Drag todos from the calendar to unschedule them.
+            </p>
+          ) : (
+            unscheduledTodos.map((todo) => (
+              <SortableTodoItem
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleTodo}
+                onDelete={deleteTodo}
+              />
+            ))
+          )}
+        </div>
       </div>
     );
   };
 
   return (
-    <DndContext onDragEnd={handleDragEnd}>
+    <DndContext onDragEnd={handleDragEnd} collisionDetection={pointerWithin}>
       <div className="max-w-7xl mx-auto">
         <h2 className="text-3xl font-bold text-gray-900 mb-6">My Todos</h2>
 
@@ -193,10 +252,12 @@ export default function TodosPage() {
 
         {/* Unscheduled Todos Section */}
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3">
-            Unscheduled Todos ({unscheduledTodos.length})
-          </h3>
-          <UnscheduledDropZone />
+          <SortableContext
+            items={unscheduledTodos.map((todo) => `todo-${todo.id}`)}
+            strategy={verticalListSortingStrategy}
+          >
+            <UnscheduledDropZone />
+          </SortableContext>
         </div>
 
         {/* Weekly Calendar Section */}
