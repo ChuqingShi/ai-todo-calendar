@@ -106,14 +106,6 @@ export default function SortableTodoItem({
           }`}
         >
           {todo.title}
-          {todo.deadline && (
-            <span className="ml-2 text-xs text-blue-600 font-medium">
-              📅 {new Date(todo.deadline).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
-            </span>
-          )}
         </span>
       )}
 

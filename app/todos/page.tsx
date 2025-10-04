@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { startOfWeek } from "date-fns";
+import { startOfWeek, format } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import DraggableTodoItem from "@/components/DraggableTodoItem";
 import SortableTodoItem from "@/components/SortableTodoItem";
@@ -179,6 +179,19 @@ export default function TodosPage() {
           todo.id === todoId ? { ...todo, deadline: undefined } : todo
         )
       );
+    } else if (dropTarget === "today") {
+      // If dropped on today zone, set deadline to today
+      const targetDayTodos = todos
+        .filter((t) => t.deadline === today)
+        .sort((a, b) => a.order - b.order);
+
+      setTodos(
+        todos.map((todo) =>
+          todo.id === todoId
+            ? { ...todo, deadline: today, order: targetDayTodos.length }
+            : todo
+        )
+      );
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // Otherwise set the deadline to the date (if it's a valid date format)
       const targetDayTodos = todos
@@ -209,9 +222,16 @@ export default function TodosPage() {
     setCurrentWeekStart((prev) => new Date(prev.getTime() + 7 * 24 * 60 * 60 * 1000));
   };
 
-  // Separate todos into unscheduled and scheduled, sorted by order
+  // Get today's date in YYYY-MM-DD format
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  // Separate todos into unscheduled, today's, and scheduled, sorted by order
   const unscheduledTodos = todos
     .filter((todo) => !todo.deadline)
+    .sort((a, b) => a.order - b.order);
+
+  const todayTodos = todos
+    .filter((todo) => todo.deadline === today)
     .sort((a, b) => a.order - b.order);
 
   // Droppable zone for unscheduled todos
@@ -251,6 +271,43 @@ export default function TodosPage() {
     );
   };
 
+  // Droppable zone for today's todos
+  const TodayDropZone = () => {
+    const { setNodeRef, isOver } = useDroppable({
+      id: "today",
+    });
+
+    return (
+      <div
+        ref={setNodeRef}
+        className={`min-h-32 p-4 rounded-lg transition-all ${
+          isOver ? "bg-green-50 border-2 border-green-400" : "bg-transparent"
+        }`}
+      >
+        <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
+          Today&apos;s Todos ({todayTodos.length})
+        </h3>
+        <div className="space-y-2 pointer-events-auto">
+          {todayTodos.length === 0 ? (
+            <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
+              No todos scheduled for today. Drag todos here to schedule them for today.
+            </p>
+          ) : (
+            todayTodos.map((todo) => (
+              <SortableTodoItem
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleTodo}
+                onDelete={deleteTodo}
+                onEdit={editTodo}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <DndContext onDragEnd={handleDragEnd} collisionDetection={pointerWithin}>
       <div className="max-w-7xl mx-auto">
@@ -275,14 +332,27 @@ export default function TodosPage() {
           </div>
         </form>
 
-        {/* Unscheduled Todos Section */}
-        <div className="mb-6">
-          <SortableContext
-            items={unscheduledTodos.map((todo) => `todo-${todo.id}`)}
-            strategy={verticalListSortingStrategy}
-          >
-            <UnscheduledDropZone />
-          </SortableContext>
+        {/* Unscheduled Todos and Today's Todos Section - Side by Side */}
+        <div className="mb-6 flex gap-4">
+          {/* Left: Unscheduled Todos */}
+          <div className="flex-1">
+            <SortableContext
+              items={unscheduledTodos.map((todo) => `todo-${todo.id}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              <UnscheduledDropZone />
+            </SortableContext>
+          </div>
+
+          {/* Right: Today's Todos */}
+          <div className="flex-1">
+            <SortableContext
+              items={todayTodos.map((todo) => `todo-${todo.id}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              <TodayDropZone />
+            </SortableContext>
+          </div>
         </div>
 
         {/* Weekly Calendar Section */}
