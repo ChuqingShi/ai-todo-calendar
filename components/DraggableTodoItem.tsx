@@ -35,22 +35,42 @@ export default function DraggableTodoItem({
       ref={setNodeRef}
       style={style}
       {...attributes}
-      {...listeners}
       className={`
         flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-md
-        hover:shadow-sm transition-shadow cursor-grab active:cursor-grabbing
+        hover:shadow-sm transition-shadow
         ${isDragging ? "shadow-lg ring-2 ring-blue-400" : ""}
       `}
     >
+      {/* Drag Handle */}
+      <div
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <circle cx="9" cy="5" r="1" />
+          <circle cx="9" cy="12" r="1" />
+          <circle cx="9" cy="19" r="1" />
+          <circle cx="15" cy="5" r="1" />
+          <circle cx="15" cy="12" r="1" />
+          <circle cx="15" cy="19" r="1" />
+        </svg>
+      </div>
+
       {/* Checkbox to mark as completed */}
       <input
         type="checkbox"
         checked={todo.completed}
-        onChange={(e) => {
-          e.stopPropagation();
-          onToggle(todo.id);
-        }}
-        onClick={(e) => e.stopPropagation()}
+        onChange={() => onToggle(todo.id)}
         className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
       />
 
@@ -73,10 +93,7 @@ export default function DraggableTodoItem({
 
       {/* Delete button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete(todo.id);
-        }}
+        onClick={() => onDelete(todo.id)}
         className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
       >
         Delete
