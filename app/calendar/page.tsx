@@ -41,19 +41,18 @@ export default function CalendarPage() {
 
   /**
    * Transform todos into FullCalendar events
-   * Only show incomplete todos with deadlines, sorted by order
+   * Only show incomplete todos with deadlines, sorted by order within each day
    */
   const events = todos
     .filter((todo) => todo.deadline && !todo.completed)
-    .sort((a, b) => a.order - b.order)
-    .map((todo, index) => ({
+    .map((todo) => ({
       id: String(todo.id),
       title: todo.title,
       date: todo.deadline,
       backgroundColor: "#3b82f6",
       borderColor: "#2563eb",
       textColor: "white",
-      order: index,
+      order: todo.order, // Use the actual order value for sorting within each day
     }));
 
   return (
@@ -70,6 +69,7 @@ export default function CalendarPage() {
           editable={false}
           selectable={false}
           dayMaxEvents={true}
+          eventOrder="order"
           headerToolbar={{
             left: "prev,next today",
             center: "title",
