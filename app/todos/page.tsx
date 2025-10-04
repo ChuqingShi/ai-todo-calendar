@@ -29,41 +29,54 @@ export default function TodosPage() {
   const [currentWeekStart, setCurrentWeekStart] = useState(() =>
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
+  const [isLoaded, setIsLoaded] = useState(false);
 
   /**
-   * Load todos from localStorage on mount
+   * Load todos from localStorage on mount and when window regains focus
    */
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const savedTodos = localStorage.getItem(STORAGE_KEY);
-        if (savedTodos) {
-          const parsed = JSON.parse(savedTodos);
-          // Add order field to old todos that don't have it
-          const todosWithOrder = parsed.map((todo: Todo, index: number) => ({
-            ...todo,
-            order: todo.order !== undefined ? todo.order : index,
-          }));
-          setTodos(todosWithOrder);
+    const loadTodos = () => {
+      if (typeof window !== "undefined") {
+        try {
+          const savedTodos = localStorage.getItem(STORAGE_KEY);
+          if (savedTodos) {
+            const parsed = JSON.parse(savedTodos);
+            // Add order field to old todos that don't have it
+            const todosWithOrder = parsed.map((todo: Todo, index: number) => ({
+              ...todo,
+              order: todo.order !== undefined ? todo.order : index,
+            }));
+            setTodos(todosWithOrder);
+          }
+        } catch (error) {
+          console.error("Failed to load todos from localStorage:", error);
         }
-      } catch (error) {
-        console.error("Failed to load todos from localStorage:", error);
+        setIsLoaded(true);
       }
-    }
+    };
+
+    loadTodos();
+
+    // Reload when window regains focus (e.g., when navigating back)
+    window.addEventListener("focus", loadTodos);
+
+    return () => {
+      window.removeEventListener("focus", loadTodos);
+    };
   }, []);
 
   /**
-   * Save todos to localStorage whenever they change
+   * Save todos to localStorage whenever they change (but only after initial load)
    */
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (isLoaded && typeof window !== "undefined") {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
       } catch (error) {
         console.error("Failed to save todos to localStorage:", error);
       }
     }
-  }, [todos]);
+  }, [todos, isLoaded]);
 
   /**
    * Add a new todo
