@@ -102,6 +102,17 @@ export default function TodosPage() {
   };
 
   /**
+   * Edit a todo's title
+   */
+  const editTodo = (id: number, newTitle: string) => {
+    setTodos(
+      todos.map((todo) =>
+        todo.id === id ? { ...todo, title: newTitle } : todo
+      )
+    );
+  };
+
+  /**
    * Handle drag end - update todo deadline or reorder
    */
   const handleDragEnd = (event: DragEndEvent) => {
@@ -218,6 +229,7 @@ export default function TodosPage() {
                 todo={todo}
                 onToggle={toggleTodo}
                 onDelete={deleteTodo}
+                onEdit={editTodo}
               />
             ))
           )}
