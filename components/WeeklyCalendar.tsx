@@ -135,13 +135,13 @@ export default function WeeklyCalendar({
         <div className="flex gap-2">
           <button
             onClick={onPreviousWeek}
-            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
           >
             ← Prev
           </button>
           <button
             onClick={onNextWeek}
-            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50"
+            className="px-3 py-1 text-sm bg-white border border-gray-300 rounded hover:bg-gray-50 text-gray-700"
           >
             Next →
           </button>

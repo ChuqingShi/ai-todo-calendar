@@ -251,7 +251,7 @@ export default function TodosPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Add a new todo..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
             />
             <button
               type="submit"
