@@ -70,6 +70,7 @@ export default function CalendarPage() {
           selectable={false}
           dayMaxEvents={true}
           eventOrder="order"
+          fixedWeekCount={false}
           headerToolbar={{
             left: "prev,next today",
             center: "title",
