@@ -6,6 +6,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-ki
 import { startOfWeek, format } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import SortableTodoItem from "@/components/SortableTodoItem";
+import StaticTodoItem from "@/components/StaticTodoItem";
 
 /**
  * Todo Interface
@@ -181,19 +182,6 @@ export default function TodosPage() {
           todo.id === todoId ? { ...todo, deadline: undefined } : todo
         )
       );
-    } else if (dropTarget === "today") {
-      // If dropped on today zone, set deadline to today
-      const targetDayTodos = todos
-        .filter((t) => t.deadline === today)
-        .sort((a, b) => a.order - b.order);
-
-      setTodos(
-        todos.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, deadline: today, order: targetDayTodos.length }
-            : todo
-        )
-      );
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // Otherwise set the deadline to the date (if it's a valid date format)
       const targetDayTodos = todos
@@ -273,30 +261,21 @@ export default function TodosPage() {
     );
   };
 
-  // Droppable zone for today's todos
-  const TodayDropZone = () => {
-    const { setNodeRef, isOver } = useDroppable({
-      id: "today",
-    });
-
+  // Static view for today's todos (non-draggable, non-droppable)
+  const TodayTodosView = () => {
     return (
-      <div
-        ref={setNodeRef}
-        className={`min-h-32 p-4 rounded-lg transition-all ${
-          isOver ? "bg-green-50 border-2 border-green-400" : "bg-transparent"
-        }`}
-      >
-        <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
+      <div className="min-h-32 p-4 rounded-lg bg-transparent">
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">
           Today&apos;s Todos ({todayTodos.length})
         </h3>
-        <div className="space-y-2 pointer-events-auto">
+        <div className="space-y-2">
           {todayTodos.length === 0 ? (
-            <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
-              No todos scheduled for today. Drag todos here to schedule them for today.
+            <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
+              No todos scheduled for today.
             </p>
           ) : (
             todayTodos.map((todo) => (
-              <SortableTodoItem
+              <StaticTodoItem
                 key={todo.id}
                 todo={todo}
                 onToggle={toggleTodo}
@@ -348,12 +327,7 @@ export default function TodosPage() {
 
           {/* Right: Today's Todos */}
           <div className="flex-1">
-            <SortableContext
-              items={todayTodos.map((todo) => `todo-${todo.id}`)}
-              strategy={verticalListSortingStrategy}
-            >
-              <TodayDropZone />
-            </SortableContext>
+            <TodayTodosView />
           </div>
         </div>
 
