@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 interface Todo {
   id: number;
@@ -10,39 +8,21 @@ interface Todo {
   order: number;
 }
 
-interface SortableTodoItemProps {
+interface StaticTodoItemProps {
   todo: Todo;
   onToggle: (id: number) => void;
   onDelete: (id: number) => void;
   onEdit: (id: number, newTitle: string) => void;
 }
 
-export default function SortableTodoItem({
+export default function StaticTodoItem({
   todo,
   onToggle,
   onDelete,
   onEdit,
-}: SortableTodoItemProps) {
+}: StaticTodoItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(todo.title);
-
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({
-    id: `todo-${todo.id}`,
-    data: { todo },
-  });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -67,23 +47,13 @@ export default function SortableTodoItem({
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      {...attributes}
-      {...(isEditing ? {} : listeners)}
-      className={`
-        flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-md
-        hover:shadow-sm transition-shadow
-        ${isEditing ? "cursor-default" : "cursor-grab active:cursor-grabbing"}
-        ${isDragging ? "shadow-lg ring-2 ring-blue-400 z-50" : ""}
-      `}
+      className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-md hover:shadow-sm transition-shadow"
     >
       {/* Checkbox to mark as completed */}
       <input
         type="checkbox"
         checked={todo.completed}
         onChange={() => onToggle(todo.id)}
-        onPointerDown={(e) => e.stopPropagation()}
         className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 cursor-pointer"
       />
 
@@ -95,7 +65,6 @@ export default function SortableTodoItem({
           onChange={(e) => setEditValue(e.target.value)}
           onBlur={handleSave}
           onKeyDown={handleKeyDown}
-          onPointerDown={(e) => e.stopPropagation()}
           autoFocus
           className="flex-1 px-2 py-1 border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
         />
@@ -113,7 +82,6 @@ export default function SortableTodoItem({
       {!isEditing && (
         <button
           onClick={handleEdit}
-          onPointerDown={(e) => e.stopPropagation()}
           className="px-3 py-1 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
         >
           Edit
@@ -123,7 +91,6 @@ export default function SortableTodoItem({
       {/* Delete button */}
       <button
         onClick={() => onDelete(todo.id)}
-        onPointerDown={(e) => e.stopPropagation()}
         className="px-3 py-1 text-red-600 hover:bg-red-50 rounded-md transition-colors"
       >
         Delete

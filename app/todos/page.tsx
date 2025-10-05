@@ -3,10 +3,10 @@
 import { useState, useEffect } from "react";
 import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { startOfWeek } from "date-fns";
+import { startOfWeek, format } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
-import DraggableTodoItem from "@/components/DraggableTodoItem";
 import SortableTodoItem from "@/components/SortableTodoItem";
+import StaticTodoItem from "@/components/StaticTodoItem";
 
 /**
  * Todo Interface
@@ -144,9 +144,10 @@ export default function TodosPage() {
 
     // Check if this is a same-day reordering operation (both todos have same deadline)
     if (activeTodo && overTodo && activeTodo.deadline === overTodo.deadline) {
+      // Get the list of todos for this specific deadline
       const todoList = activeTodo.deadline
         ? todos.filter((t) => t.deadline === activeTodo.deadline).sort((a, b) => a.order - b.order)
-        : unscheduledTodos;
+        : todos.filter((t) => !t.deadline).sort((a, b) => a.order - b.order);
 
       const oldIndex = todoList.findIndex((t) => t.id === activeTodoId);
       const newIndex = todoList.findIndex((t) => t.id === overTodoId);
@@ -154,11 +155,13 @@ export default function TodosPage() {
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         const reordered = arrayMove(todoList, oldIndex, newIndex);
 
-        // Update order values
+        // Create a map of todo IDs to their new order values
+        const orderMap = new Map(reordered.map((todo, index) => [todo.id, index]));
+
+        // Update order values for todos in this specific list
         const updatedTodos = todos.map((todo) => {
-          const newPos = reordered.findIndex((t) => t.id === todo.id);
-          if (newPos !== -1) {
-            return { ...todo, order: newPos };
+          if (orderMap.has(todo.id)) {
+            return { ...todo, order: orderMap.get(todo.id)! };
           }
           return todo;
         });
@@ -172,11 +175,14 @@ export default function TodosPage() {
     const todoId = activeTodoId;
     const dropTarget = overId;
 
-    // If dropped on unscheduled zone, remove deadline
+    // If dropped on unscheduled zone, remove deadline and set order to end
     if (dropTarget === "unscheduled") {
+      const unscheduledCount = todos.filter((t) => !t.deadline).length;
       setTodos(
         todos.map((todo) =>
-          todo.id === todoId ? { ...todo, deadline: undefined } : todo
+          todo.id === todoId
+            ? { ...todo, deadline: undefined, order: unscheduledCount }
+            : todo
         )
       );
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -209,9 +215,16 @@ export default function TodosPage() {
     setCurrentWeekStart((prev) => new Date(prev.getTime() + 7 * 24 * 60 * 60 * 1000));
   };
 
-  // Separate todos into unscheduled and scheduled, sorted by order
+  // Get today's date in YYYY-MM-DD format
+  const today = format(new Date(), "yyyy-MM-dd");
+
+  // Separate todos into unscheduled, today's, and scheduled, sorted by order
   const unscheduledTodos = todos
     .filter((todo) => !todo.deadline)
+    .sort((a, b) => a.order - b.order);
+
+  const todayTodos = todos
+    .filter((todo) => todo.deadline === today)
     .sort((a, b) => a.order - b.order);
 
   // Droppable zone for unscheduled todos
@@ -251,6 +264,34 @@ export default function TodosPage() {
     );
   };
 
+  // Static view for today's todos (non-draggable, non-droppable)
+  const TodayTodosView = () => {
+    return (
+      <div className="min-h-32 p-4 rounded-lg bg-transparent">
+        <h3 className="text-lg font-semibold text-gray-700 mb-3">
+          Today&apos;s Todos ({todayTodos.length})
+        </h3>
+        <div className="space-y-2">
+          {todayTodos.length === 0 ? (
+            <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
+              No todos scheduled for today.
+            </p>
+          ) : (
+            todayTodos.map((todo) => (
+              <StaticTodoItem
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleTodo}
+                onDelete={deleteTodo}
+                onEdit={editTodo}
+              />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <DndContext onDragEnd={handleDragEnd} collisionDetection={pointerWithin}>
       <div className="max-w-7xl mx-auto">
@@ -275,14 +316,22 @@ export default function TodosPage() {
           </div>
         </form>
 
-        {/* Unscheduled Todos Section */}
-        <div className="mb-6">
-          <SortableContext
-            items={unscheduledTodos.map((todo) => `todo-${todo.id}`)}
-            strategy={verticalListSortingStrategy}
-          >
-            <UnscheduledDropZone />
-          </SortableContext>
+        {/* Unscheduled Todos and Today's Todos Section - Side by Side */}
+        <div className="mb-6 flex gap-4">
+          {/* Left: Unscheduled Todos */}
+          <div className="flex-1">
+            <SortableContext
+              items={unscheduledTodos.map((todo) => `todo-${todo.id}`)}
+              strategy={verticalListSortingStrategy}
+            >
+              <UnscheduledDropZone />
+            </SortableContext>
+          </div>
+
+          {/* Right: Today's Todos */}
+          <div className="flex-1">
+            <TodayTodosView />
+          </div>
         </div>
 
         {/* Weekly Calendar Section */}
