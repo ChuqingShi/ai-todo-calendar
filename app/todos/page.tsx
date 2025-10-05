@@ -5,7 +5,6 @@ import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } 
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { startOfWeek, format } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
-import DraggableTodoItem from "@/components/DraggableTodoItem";
 import SortableTodoItem from "@/components/SortableTodoItem";
 
 /**
@@ -144,9 +143,10 @@ export default function TodosPage() {
 
     // Check if this is a same-day reordering operation (both todos have same deadline)
     if (activeTodo && overTodo && activeTodo.deadline === overTodo.deadline) {
+      // Get the list of todos for this specific deadline
       const todoList = activeTodo.deadline
         ? todos.filter((t) => t.deadline === activeTodo.deadline).sort((a, b) => a.order - b.order)
-        : unscheduledTodos;
+        : todos.filter((t) => !t.deadline).sort((a, b) => a.order - b.order);
 
       const oldIndex = todoList.findIndex((t) => t.id === activeTodoId);
       const newIndex = todoList.findIndex((t) => t.id === overTodoId);
@@ -154,11 +154,13 @@ export default function TodosPage() {
       if (oldIndex !== -1 && newIndex !== -1 && oldIndex !== newIndex) {
         const reordered = arrayMove(todoList, oldIndex, newIndex);
 
-        // Update order values
+        // Create a map of todo IDs to their new order values
+        const orderMap = new Map(reordered.map((todo, index) => [todo.id, index]));
+
+        // Update order values for todos in this specific list
         const updatedTodos = todos.map((todo) => {
-          const newPos = reordered.findIndex((t) => t.id === todo.id);
-          if (newPos !== -1) {
-            return { ...todo, order: newPos };
+          if (orderMap.has(todo.id)) {
+            return { ...todo, order: orderMap.get(todo.id)! };
           }
           return todo;
         });
