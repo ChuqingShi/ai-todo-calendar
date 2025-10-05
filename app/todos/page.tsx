@@ -175,11 +175,14 @@ export default function TodosPage() {
     const todoId = activeTodoId;
     const dropTarget = overId;
 
-    // If dropped on unscheduled zone, remove deadline
+    // If dropped on unscheduled zone, remove deadline and set order to end
     if (dropTarget === "unscheduled") {
+      const unscheduledCount = todos.filter((t) => !t.deadline).length;
       setTodos(
         todos.map((todo) =>
-          todo.id === todoId ? { ...todo, deadline: undefined } : todo
+          todo.id === todoId
+            ? { ...todo, deadline: undefined, order: unscheduledCount }
+            : todo
         )
       );
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
