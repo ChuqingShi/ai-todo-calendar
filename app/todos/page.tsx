@@ -88,11 +88,13 @@ export default function TodosPage() {
     e.preventDefault();
     if (inputValue.trim() === "") return;
 
+    const unscheduledCount = todos.filter((t) => !t.deadline).length;
+
     const newTodo: Todo = {
       id: Date.now(), // Simple unique ID generator
       title: inputValue,
       completed: false,
-      order: todos.length, // Add to end
+      order: unscheduledCount, // Add to end of unscheduled list
     };
 
     setTodos([...todos, newTodo]);
