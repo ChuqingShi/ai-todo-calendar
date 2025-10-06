@@ -116,7 +116,44 @@ export default function TodosPage() {
    * Delete a todo
    */
   const deleteTodo = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+    const todoToDelete = todos.find((t) => t.id === id);
+    if (!todoToDelete) return;
+
+    // Remove the todo
+    let updatedTodos = todos.filter((todo) => todo.id !== id);
+
+    // Renumber remaining todos in the same section
+    const sectionDeadline = todoToDelete.deadline;
+
+    if (sectionDeadline === undefined) {
+      // Renumber unscheduled todos
+      const unscheduledTodos = updatedTodos
+        .filter((t) => !t.deadline)
+        .sort((a, b) => a.order - b.order);
+
+      const orderMap = new Map(
+        unscheduledTodos.map((todo, index) => [todo.id, index])
+      );
+
+      updatedTodos = updatedTodos.map((todo) =>
+        orderMap.has(todo.id) ? { ...todo, order: orderMap.get(todo.id)! } : todo
+      );
+    } else {
+      // Renumber todos in the specific date
+      const dateTodos = updatedTodos
+        .filter((t) => t.deadline === sectionDeadline)
+        .sort((a, b) => a.order - b.order);
+
+      const orderMap = new Map(
+        dateTodos.map((todo, index) => [todo.id, index])
+      );
+
+      updatedTodos = updatedTodos.map((todo) =>
+        orderMap.has(todo.id) ? { ...todo, order: orderMap.get(todo.id)! } : todo
+      );
+    }
+
+    setTodos(updatedTodos);
   };
 
   /**
