@@ -181,26 +181,83 @@ export default function TodosPage() {
     // If dropped on unscheduled zone, remove deadline and set order to end
     if (dropTarget === "unscheduled") {
       const unscheduledCount = todos.filter((t) => !t.deadline).length;
-      setTodos(
-        todos.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, deadline: undefined, order: unscheduledCount }
-            : todo
-        )
+      const sourceDeadline = activeTodo?.deadline;
+
+      // Move todo to unscheduled
+      let updatedTodos = todos.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, deadline: undefined, order: unscheduledCount }
+          : todo
       );
+
+      // If moving from a scheduled date, renumber remaining todos in source section
+      if (sourceDeadline) {
+        const sourceDayTodos = updatedTodos
+          .filter((t) => t.deadline === sourceDeadline)
+          .sort((a, b) => a.order - b.order);
+
+        const sourceOrderMap = new Map(
+          sourceDayTodos.map((todo, index) => [todo.id, index])
+        );
+
+        updatedTodos = updatedTodos.map((todo) =>
+          sourceOrderMap.has(todo.id)
+            ? { ...todo, order: sourceOrderMap.get(todo.id)! }
+            : todo
+        );
+      }
+
+      setTodos(updatedTodos);
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // Otherwise set the deadline to the date (if it's a valid date format)
       const targetDayTodos = todos
-        .filter((t) => t.deadline === dropTarget)
+        .filter((t) => t.deadline === dropTarget && t.id !== todoId)
         .sort((a, b) => a.order - b.order);
+      const sourceDeadline = activeTodo?.deadline;
 
-      setTodos(
-        todos.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, deadline: dropTarget, order: targetDayTodos.length }
-            : todo
-        )
+      // Move todo to target date
+      let updatedTodos = todos.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, deadline: dropTarget, order: targetDayTodos.length }
+          : todo
       );
+
+      // If moving from a different section, renumber remaining todos in source section
+      if (sourceDeadline !== dropTarget) {
+        if (sourceDeadline === undefined) {
+          // Moving from unscheduled - renumber remaining unscheduled todos
+          const unscheduledTodos = updatedTodos
+            .filter((t) => !t.deadline)
+            .sort((a, b) => a.order - b.order);
+
+          const unscheduledOrderMap = new Map(
+            unscheduledTodos.map((todo, index) => [todo.id, index])
+          );
+
+          updatedTodos = updatedTodos.map((todo) =>
+            unscheduledOrderMap.has(todo.id)
+              ? { ...todo, order: unscheduledOrderMap.get(todo.id)! }
+              : todo
+          );
+        } else {
+          // Moving from a different date - renumber remaining todos in source date
+          const sourceDayTodos = updatedTodos
+            .filter((t) => t.deadline === sourceDeadline)
+            .sort((a, b) => a.order - b.order);
+
+          const sourceOrderMap = new Map(
+            sourceDayTodos.map((todo, index) => [todo.id, index])
+          );
+
+          updatedTodos = updatedTodos.map((todo) =>
+            sourceOrderMap.has(todo.id)
+              ? { ...todo, order: sourceOrderMap.get(todo.id)! }
+              : todo
+          );
+        }
+      }
+
+      setTodos(updatedTodos);
     }
   };
 
