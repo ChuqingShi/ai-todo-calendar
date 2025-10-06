@@ -239,14 +239,14 @@ export default function TodosPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`min-h-32 p-4 rounded-lg transition-all ${
+        className={`p-3 rounded-lg transition-all ${
           isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
         }`}
       >
         <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
           Unscheduled Todos ({unscheduledTodos.length})
         </h3>
-        <div className="space-y-2 pointer-events-auto">
+        <div className="space-y-2 pointer-events-auto h-60 overflow-y-auto">
           {unscheduledTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
               No unscheduled todos. Drag todos from the calendar to unschedule them.
@@ -276,11 +276,11 @@ export default function TodosPage() {
       : format(selectedDateObj, "MMM d");
 
     return (
-      <div className="min-h-32 p-4 rounded-lg bg-transparent">
+      <div className="p-3 rounded-lg bg-transparent">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">
           {dateLabel}&apos;s Todos ({selectedDayTodos.length})
         </h3>
-        <div className="space-y-2">
+        <div className="space-y-2 h-60 overflow-y-auto">
           {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
               No todos scheduled for {dateLabel.toLowerCase()}.
