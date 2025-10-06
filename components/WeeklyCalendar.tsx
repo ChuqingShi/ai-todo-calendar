@@ -17,11 +17,15 @@ interface WeeklyCalendarProps {
   currentWeekStart: Date;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
+  selectedDate?: string;
+  onDateClick?: (dateStr: string) => void;
 }
 
 interface DayCardProps {
   date: Date;
   todos: Todo[];
+  selectedDate?: string;
+  onDateClick?: (dateStr: string) => void;
 }
 
 interface CalendarTodoItemProps {
@@ -69,7 +73,7 @@ function CalendarTodoItem({ todo }: CalendarTodoItemProps) {
   );
 }
 
-function DayCard({ date, todos }: DayCardProps) {
+function DayCard({ date, todos, selectedDate, onDateClick }: DayCardProps) {
   const dateStr = format(date, "yyyy-MM-dd");
   const { setNodeRef, isOver } = useDroppable({
     id: dateStr,
@@ -80,6 +84,13 @@ function DayCard({ date, todos }: DayCardProps) {
     .sort((a, b) => a.order - b.order);
 
   const isToday = isSameDay(date, new Date());
+  const isSelected = selectedDate === dateStr;
+
+  const handleDateClick = () => {
+    if (onDateClick) {
+      onDateClick(dateStr);
+    }
+  };
 
   return (
     <div
@@ -88,9 +99,13 @@ function DayCard({ date, todos }: DayCardProps) {
         min-h-32 p-3 border rounded-lg transition-all
         ${isOver ? "bg-blue-50 border-blue-400 border-2" : "bg-white border-gray-200"}
         ${isToday ? "ring-2 ring-blue-300" : ""}
+        ${isSelected ? "ring-2 ring-green-400" : ""}
       `}
     >
-      <div className="text-center mb-2 pointer-events-none">
+      <div
+        className="text-center mb-2 cursor-pointer hover:bg-gray-50 rounded-md py-1"
+        onClick={handleDateClick}
+      >
         <div className="text-xs font-semibold text-gray-600 uppercase">
           {format(date, "EEE")}
         </div>
@@ -123,6 +138,8 @@ export default function WeeklyCalendar({
   currentWeekStart,
   onPreviousWeek,
   onNextWeek,
+  selectedDate,
+  onDateClick,
 }: WeeklyCalendarProps) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
 
@@ -150,7 +167,13 @@ export default function WeeklyCalendar({
 
       <div className="grid grid-cols-7 gap-2">
         {weekDays.map((day) => (
-          <DayCard key={day.toISOString()} date={day} todos={todos} />
+          <DayCard
+            key={day.toISOString()}
+            date={day}
+            todos={todos}
+            selectedDate={selectedDate}
+            onDateClick={onDateClick}
+          />
         ))}
       </div>
     </div>

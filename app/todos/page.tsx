@@ -30,6 +30,9 @@ export default function TodosPage() {
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
   const [isLoaded, setIsLoaded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd")
+  );
 
   /**
    * Load todos from localStorage on mount and when window regains focus
@@ -85,11 +88,13 @@ export default function TodosPage() {
     e.preventDefault();
     if (inputValue.trim() === "") return;
 
+    const unscheduledCount = todos.filter((t) => !t.deadline).length;
+
     const newTodo: Todo = {
       id: Date.now(), // Simple unique ID generator
       title: inputValue,
       completed: false,
-      order: todos.length, // Add to end
+      order: unscheduledCount, // Add to end of unscheduled list
     };
 
     setTodos([...todos, newTodo]);
@@ -111,7 +116,44 @@ export default function TodosPage() {
    * Delete a todo
    */
   const deleteTodo = (id: number) => {
-    setTodos(todos.filter((todo) => todo.id !== id));
+    const todoToDelete = todos.find((t) => t.id === id);
+    if (!todoToDelete) return;
+
+    // Remove the todo
+    let updatedTodos = todos.filter((todo) => todo.id !== id);
+
+    // Renumber remaining todos in the same section
+    const sectionDeadline = todoToDelete.deadline;
+
+    if (sectionDeadline === undefined) {
+      // Renumber unscheduled todos
+      const unscheduledTodos = updatedTodos
+        .filter((t) => !t.deadline)
+        .sort((a, b) => a.order - b.order);
+
+      const orderMap = new Map(
+        unscheduledTodos.map((todo, index) => [todo.id, index])
+      );
+
+      updatedTodos = updatedTodos.map((todo) =>
+        orderMap.has(todo.id) ? { ...todo, order: orderMap.get(todo.id)! } : todo
+      );
+    } else {
+      // Renumber todos in the specific date
+      const dateTodos = updatedTodos
+        .filter((t) => t.deadline === sectionDeadline)
+        .sort((a, b) => a.order - b.order);
+
+      const orderMap = new Map(
+        dateTodos.map((todo, index) => [todo.id, index])
+      );
+
+      updatedTodos = updatedTodos.map((todo) =>
+        orderMap.has(todo.id) ? { ...todo, order: orderMap.get(todo.id)! } : todo
+      );
+    }
+
+    setTodos(updatedTodos);
   };
 
   /**
@@ -178,26 +220,83 @@ export default function TodosPage() {
     // If dropped on unscheduled zone, remove deadline and set order to end
     if (dropTarget === "unscheduled") {
       const unscheduledCount = todos.filter((t) => !t.deadline).length;
-      setTodos(
-        todos.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, deadline: undefined, order: unscheduledCount }
-            : todo
-        )
+      const sourceDeadline = activeTodo?.deadline;
+
+      // Move todo to unscheduled
+      let updatedTodos = todos.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, deadline: undefined, order: unscheduledCount }
+          : todo
       );
+
+      // If moving from a scheduled date, renumber remaining todos in source section
+      if (sourceDeadline) {
+        const sourceDayTodos = updatedTodos
+          .filter((t) => t.deadline === sourceDeadline)
+          .sort((a, b) => a.order - b.order);
+
+        const sourceOrderMap = new Map(
+          sourceDayTodos.map((todo, index) => [todo.id, index])
+        );
+
+        updatedTodos = updatedTodos.map((todo) =>
+          sourceOrderMap.has(todo.id)
+            ? { ...todo, order: sourceOrderMap.get(todo.id)! }
+            : todo
+        );
+      }
+
+      setTodos(updatedTodos);
     } else if (dropTarget.match(/^\d{4}-\d{2}-\d{2}$/)) {
       // Otherwise set the deadline to the date (if it's a valid date format)
       const targetDayTodos = todos
-        .filter((t) => t.deadline === dropTarget)
+        .filter((t) => t.deadline === dropTarget && t.id !== todoId)
         .sort((a, b) => a.order - b.order);
+      const sourceDeadline = activeTodo?.deadline;
 
-      setTodos(
-        todos.map((todo) =>
-          todo.id === todoId
-            ? { ...todo, deadline: dropTarget, order: targetDayTodos.length }
-            : todo
-        )
+      // Move todo to target date
+      let updatedTodos = todos.map((todo) =>
+        todo.id === todoId
+          ? { ...todo, deadline: dropTarget, order: targetDayTodos.length }
+          : todo
       );
+
+      // If moving from a different section, renumber remaining todos in source section
+      if (sourceDeadline !== dropTarget) {
+        if (sourceDeadline === undefined) {
+          // Moving from unscheduled - renumber remaining unscheduled todos
+          const unscheduledTodos = updatedTodos
+            .filter((t) => !t.deadline)
+            .sort((a, b) => a.order - b.order);
+
+          const unscheduledOrderMap = new Map(
+            unscheduledTodos.map((todo, index) => [todo.id, index])
+          );
+
+          updatedTodos = updatedTodos.map((todo) =>
+            unscheduledOrderMap.has(todo.id)
+              ? { ...todo, order: unscheduledOrderMap.get(todo.id)! }
+              : todo
+          );
+        } else {
+          // Moving from a different date - renumber remaining todos in source date
+          const sourceDayTodos = updatedTodos
+            .filter((t) => t.deadline === sourceDeadline)
+            .sort((a, b) => a.order - b.order);
+
+          const sourceOrderMap = new Map(
+            sourceDayTodos.map((todo, index) => [todo.id, index])
+          );
+
+          updatedTodos = updatedTodos.map((todo) =>
+            sourceOrderMap.has(todo.id)
+              ? { ...todo, order: sourceOrderMap.get(todo.id)! }
+              : todo
+          );
+        }
+      }
+
+      setTodos(updatedTodos);
     }
   };
 
@@ -218,13 +317,13 @@ export default function TodosPage() {
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Separate todos into unscheduled, today's, and scheduled, sorted by order
+  // Separate todos into unscheduled and selected day's todos, sorted by order
   const unscheduledTodos = todos
     .filter((todo) => !todo.deadline)
     .sort((a, b) => a.order - b.order);
 
-  const todayTodos = todos
-    .filter((todo) => todo.deadline === today)
+  const selectedDayTodos = todos
+    .filter((todo) => todo.deadline === selectedDate)
     .sort((a, b) => a.order - b.order);
 
   // Droppable zone for unscheduled todos
@@ -236,14 +335,14 @@ export default function TodosPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`min-h-32 p-4 rounded-lg transition-all ${
+        className={`p-3 rounded-lg transition-all ${
           isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
         }`}
       >
         <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
           Unscheduled Todos ({unscheduledTodos.length})
         </h3>
-        <div className="space-y-2 pointer-events-auto">
+        <div className="space-y-2 pointer-events-auto h-60 overflow-y-auto">
           {unscheduledTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
               No unscheduled todos. Drag todos from the calendar to unschedule them.
@@ -264,20 +363,26 @@ export default function TodosPage() {
     );
   };
 
-  // Static view for today's todos (non-draggable, non-droppable)
-  const TodayTodosView = () => {
+  // Static view for selected day's todos (non-draggable, non-droppable)
+  const SelectedDayTodosView = () => {
+    const isToday = selectedDate === today;
+    const selectedDateObj = new Date(selectedDate + "T00:00:00");
+    const dateLabel = isToday
+      ? "Today"
+      : format(selectedDateObj, "MMM d");
+
     return (
-      <div className="min-h-32 p-4 rounded-lg bg-transparent">
+      <div className="p-3 rounded-lg bg-transparent">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">
-          Today&apos;s Todos ({todayTodos.length})
+          {dateLabel}&apos;s Todos ({selectedDayTodos.length})
         </h3>
-        <div className="space-y-2">
-          {todayTodos.length === 0 ? (
+        <div className="space-y-2 h-60 overflow-y-auto">
+          {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
-              No todos scheduled for today.
+              No todos scheduled for {dateLabel.toLowerCase()}.
             </p>
           ) : (
-            todayTodos.map((todo) => (
+            selectedDayTodos.map((todo) => (
               <StaticTodoItem
                 key={todo.id}
                 todo={todo}
@@ -328,9 +433,9 @@ export default function TodosPage() {
             </SortableContext>
           </div>
 
-          {/* Right: Today's Todos */}
+          {/* Right: Selected Day's Todos */}
           <div className="flex-1">
-            <TodayTodosView />
+            <SelectedDayTodosView />
           </div>
         </div>
 
@@ -341,6 +446,8 @@ export default function TodosPage() {
             currentWeekStart={currentWeekStart}
             onPreviousWeek={handlePreviousWeek}
             onNextWeek={handleNextWeek}
+            selectedDate={selectedDate}
+            onDateClick={setSelectedDate}
           />
         </div>
       </div>
