@@ -30,6 +30,9 @@ export default function TodosPage() {
     startOfWeek(new Date(), { weekStartsOn: 0 })
   );
   const [isLoaded, setIsLoaded] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd")
+  );
 
   /**
    * Load todos from localStorage on mount and when window regains focus
@@ -218,13 +221,13 @@ export default function TodosPage() {
   // Get today's date in YYYY-MM-DD format
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Separate todos into unscheduled, today's, and scheduled, sorted by order
+  // Separate todos into unscheduled and selected day's todos, sorted by order
   const unscheduledTodos = todos
     .filter((todo) => !todo.deadline)
     .sort((a, b) => a.order - b.order);
 
-  const todayTodos = todos
-    .filter((todo) => todo.deadline === today)
+  const selectedDayTodos = todos
+    .filter((todo) => todo.deadline === selectedDate)
     .sort((a, b) => a.order - b.order);
 
   // Droppable zone for unscheduled todos
@@ -264,20 +267,26 @@ export default function TodosPage() {
     );
   };
 
-  // Static view for today's todos (non-draggable, non-droppable)
-  const TodayTodosView = () => {
+  // Static view for selected day's todos (non-draggable, non-droppable)
+  const SelectedDayTodosView = () => {
+    const isToday = selectedDate === today;
+    const selectedDateObj = new Date(selectedDate + "T00:00:00");
+    const dateLabel = isToday
+      ? "Today"
+      : format(selectedDateObj, "MMM d");
+
     return (
       <div className="min-h-32 p-4 rounded-lg bg-transparent">
         <h3 className="text-lg font-semibold text-gray-700 mb-3">
-          Today&apos;s Todos ({todayTodos.length})
+          {dateLabel}&apos;s Todos ({selectedDayTodos.length})
         </h3>
         <div className="space-y-2">
-          {todayTodos.length === 0 ? (
+          {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
-              No todos scheduled for today.
+              No todos scheduled for {dateLabel.toLowerCase()}.
             </p>
           ) : (
-            todayTodos.map((todo) => (
+            selectedDayTodos.map((todo) => (
               <StaticTodoItem
                 key={todo.id}
                 todo={todo}
@@ -328,9 +337,9 @@ export default function TodosPage() {
             </SortableContext>
           </div>
 
-          {/* Right: Today's Todos */}
+          {/* Right: Selected Day's Todos */}
           <div className="flex-1">
-            <TodayTodosView />
+            <SelectedDayTodosView />
           </div>
         </div>
 
@@ -341,6 +350,8 @@ export default function TodosPage() {
             currentWeekStart={currentWeekStart}
             onPreviousWeek={handlePreviousWeek}
             onNextWeek={handleNextWeek}
+            selectedDate={selectedDate}
+            onDateClick={setSelectedDate}
           />
         </div>
       </div>
