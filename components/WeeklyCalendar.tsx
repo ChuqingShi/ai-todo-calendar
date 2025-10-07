@@ -19,6 +19,7 @@ interface WeeklyCalendarProps {
   onNextWeek: () => void;
   selectedDate?: string;
   onDateClick?: (dateStr: string) => void;
+  onClearWeek?: () => void;
 }
 
 interface DayCardProps {
@@ -140,15 +141,35 @@ export default function WeeklyCalendar({
   onNextWeek,
   selectedDate,
   onDateClick,
+  onClearWeek,
 }: WeeklyCalendarProps) {
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(currentWeekStart, i));
+
+  const weekEnd = addDays(currentWeekStart, 7);
+  const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+  const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+
+  const weekTodosCount = todos.filter((todo) => {
+    if (!todo.deadline) return false;
+    return todo.deadline >= weekStartStr && todo.deadline < weekEndStr;
+  }).length;
 
   return (
     <div className="bg-gray-50 p-4 rounded-lg">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-gray-900">
-          Week of {format(currentWeekStart, "MMM d, yyyy")}
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-lg font-bold text-gray-900">
+            Week of {format(currentWeekStart, "MMM d, yyyy")}
+          </h3>
+          {weekTodosCount > 0 && onClearWeek && (
+            <button
+              onClick={onClearWeek}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="flex gap-2">
           <button
             onClick={onPreviousWeek}

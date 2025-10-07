@@ -182,6 +182,22 @@ export default function TodosPage() {
   };
 
   /**
+   * Clear all todos in the current week
+   */
+  const clearWeekTodos = () => {
+    const weekEnd = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+    const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+
+    setTodos(
+      todos.filter((todo) => {
+        if (!todo.deadline) return true; // Keep unscheduled
+        return todo.deadline < weekStartStr || todo.deadline >= weekEndStr;
+      })
+    );
+  };
+
+  /**
    * Handle drag end - update todo deadline or reorder
    */
   const handleDragEnd = (event: DragEndEvent) => {
@@ -483,6 +499,7 @@ export default function TodosPage() {
             onNextWeek={handleNextWeek}
             selectedDate={selectedDate}
             onDateClick={setSelectedDate}
+            onClearWeek={clearWeekTodos}
           />
         </div>
       </div>
