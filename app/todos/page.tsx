@@ -535,12 +535,17 @@ export default function TodosPage() {
           </h3>
           <div className="flex gap-2">
             {isToday && selectedDayTodos.some((todo) => !todo.completed) && (
-              <button
-                onClick={postponeToTomorrow}
-                className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
-              >
-                Postpone
-              </button>
+              <div className="group relative">
+                <button
+                  onClick={postponeToTomorrow}
+                  className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
+                >
+                  Postpone
+                </button>
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-3 py-1 bg-gray-800 text-white text-sm rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                  Carry over all unfinished todos to tomorrow.
+                </div>
+              </div>
             )}
             {selectedDayTodos.length > 0 && (
               <button
