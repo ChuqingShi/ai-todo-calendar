@@ -477,8 +477,8 @@ export default function TodosPage() {
     return (
       <div
         ref={setNodeRef}
-        className={`p-3 rounded-lg transition-all ${
-          isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
+        className={`p-3 rounded-lg transition-all border ${
+          isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-white border-gray-200"
         }`}
       >
         <div className="flex items-center justify-between mb-3 pointer-events-none">
@@ -528,7 +528,7 @@ export default function TodosPage() {
       : format(selectedDateObj, "MMM d");
 
     return (
-      <div className="p-3 rounded-lg bg-transparent">
+      <div className="p-3 rounded-lg bg-white border border-gray-200 ring-2 ring-green-400">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-lg font-semibold text-gray-700">
             {dateLabel}&apos;s Todos ({selectedDayTodos.length})
