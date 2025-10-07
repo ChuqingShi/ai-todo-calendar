@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { startOfWeek, format } from "date-fns";
@@ -33,6 +33,14 @@ export default function TodosPage() {
   const [selectedDate, setSelectedDate] = useState(() =>
     format(new Date(), "yyyy-MM-dd")
   );
+
+  // Ref to preserve scroll position in unscheduled todos
+  const unscheduledScrollRef = useRef<HTMLDivElement>(null);
+  const savedScrollPos = useRef<number>(0);
+
+  // Ref to preserve scroll position in selected day's todos
+  const selectedDayScrollRef = useRef<HTMLDivElement>(null);
+  const savedSelectedDayScrollPos = useRef<number>(0);
 
   /**
    * Load todos from localStorage on mount and when window regains focus
@@ -82,6 +90,27 @@ export default function TodosPage() {
   }, [todos, isLoaded]);
 
   /**
+   * Restore scroll position after todos change
+   */
+  useEffect(() => {
+    if (unscheduledScrollRef.current) {
+      if (savedScrollPos.current === -1) {
+        // Scroll to bottom for newly added items
+        unscheduledScrollRef.current.scrollTop = unscheduledScrollRef.current.scrollHeight;
+        savedScrollPos.current = 0; // Reset
+      } else if (savedScrollPos.current > 0) {
+        // Restore previous position
+        unscheduledScrollRef.current.scrollTop = savedScrollPos.current;
+      }
+    }
+
+    // Restore scroll position for selected day's todos
+    if (selectedDayScrollRef.current && savedSelectedDayScrollPos.current > 0) {
+      selectedDayScrollRef.current.scrollTop = savedSelectedDayScrollPos.current;
+    }
+  }, [todos]);
+
+  /**
    * Add a new todo
    */
   const addTodo = (e: React.FormEvent) => {
@@ -97,6 +126,9 @@ export default function TodosPage() {
       order: unscheduledCount, // Add to end of unscheduled list
     };
 
+    // Mark to scroll to bottom for newly added item
+    savedScrollPos.current = -1;
+
     setTodos([...todos, newTodo]);
     setInputValue("");
   };
@@ -105,6 +137,14 @@ export default function TodosPage() {
    * Toggle todo completion status
    */
   const toggleTodo = (id: number) => {
+    // Save scroll position before updating
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
+    }
+
     setTodos(
       todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
@@ -116,6 +156,14 @@ export default function TodosPage() {
    * Delete a todo
    */
   const deleteTodo = (id: number) => {
+    // Save scroll position before deleting
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
+    }
+
     const todoToDelete = todos.find((t) => t.id === id);
     if (!todoToDelete) return;
 
@@ -160,10 +208,48 @@ export default function TodosPage() {
    * Edit a todo's title
    */
   const editTodo = (id: number, newTitle: string) => {
+    // Save scroll position before editing
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
+    }
+
     setTodos(
       todos.map((todo) =>
         todo.id === id ? { ...todo, title: newTitle } : todo
       )
+    );
+  };
+
+  /**
+   * Clear all unscheduled todos
+   */
+  const clearUnscheduledTodos = () => {
+    setTodos(todos.filter((todo) => todo.deadline !== undefined));
+  };
+
+  /**
+   * Clear all todos for the selected date
+   */
+  const clearSelectedDayTodos = () => {
+    setTodos(todos.filter((todo) => todo.deadline !== selectedDate));
+  };
+
+  /**
+   * Clear all todos in the current week
+   */
+  const clearWeekTodos = () => {
+    const weekEnd = new Date(currentWeekStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+    const weekStartStr = format(currentWeekStart, "yyyy-MM-dd");
+    const weekEndStr = format(weekEnd, "yyyy-MM-dd");
+
+    setTodos(
+      todos.filter((todo) => {
+        if (!todo.deadline) return true; // Keep unscheduled
+        return todo.deadline < weekStartStr || todo.deadline >= weekEndStr;
+      })
     );
   };
 
@@ -174,6 +260,11 @@ export default function TodosPage() {
     const { active, over } = event;
 
     if (!over) return;
+
+    // Save scroll position before updating todos
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
 
     const activeId = active.id.toString();
     const overId = over.id.toString();
@@ -221,6 +312,9 @@ export default function TodosPage() {
     if (dropTarget === "unscheduled") {
       const unscheduledCount = todos.filter((t) => !t.deadline).length;
       const sourceDeadline = activeTodo?.deadline;
+
+      // Mark to scroll to bottom for newly dragged-in item
+      savedScrollPos.current = -1;
 
       // Move todo to unscheduled
       let updatedTodos = todos.map((todo) =>
@@ -339,10 +433,24 @@ export default function TodosPage() {
           isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
         }`}
       >
-        <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
-          Unscheduled Todos ({unscheduledTodos.length})
-        </h3>
-        <div className="space-y-2 pointer-events-auto h-60 overflow-y-auto">
+        <div className="flex items-center justify-between mb-3 pointer-events-none">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Unscheduled Todos ({unscheduledTodos.length})
+          </h3>
+          {unscheduledTodos.length > 0 && (
+            <button
+              onClick={clearUnscheduledTodos}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors pointer-events-auto"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div
+          ref={unscheduledScrollRef}
+          className="space-y-2 pointer-events-auto h-60 overflow-y-auto"
+        >
           {unscheduledTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
               No unscheduled todos. Drag todos from the calendar to unschedule them.
@@ -373,10 +481,23 @@ export default function TodosPage() {
 
     return (
       <div className="p-3 rounded-lg bg-transparent">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">
-          {dateLabel}&apos;s Todos ({selectedDayTodos.length})
-        </h3>
-        <div className="space-y-2 h-60 overflow-y-auto">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-700">
+            {dateLabel}&apos;s Todos ({selectedDayTodos.length})
+          </h3>
+          {selectedDayTodos.length > 0 && (
+            <button
+              onClick={clearSelectedDayTodos}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+        <div
+          ref={selectedDayScrollRef}
+          className="space-y-2 h-60 overflow-y-auto"
+        >
           {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
               No todos scheduled for {dateLabel.toLowerCase()}.
@@ -410,7 +531,7 @@ export default function TodosPage() {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Add a new todo..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-gray-400"
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400"
             />
             <button
               type="submit"
@@ -448,6 +569,7 @@ export default function TodosPage() {
             onNextWeek={handleNextWeek}
             selectedDate={selectedDate}
             onDateClick={setSelectedDate}
+            onClearWeek={clearWeekTodos}
           />
         </div>
       </div>
