@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { startOfWeek, format } from "date-fns";
@@ -33,6 +33,10 @@ export default function TodosPage() {
   const [selectedDate, setSelectedDate] = useState(() =>
     format(new Date(), "yyyy-MM-dd")
   );
+
+  // Ref to preserve scroll position in unscheduled todos
+  const unscheduledScrollRef = useRef<HTMLDivElement>(null);
+  const savedScrollPos = useRef<number>(0);
 
   /**
    * Load todos from localStorage on mount and when window regains focus
@@ -82,6 +86,22 @@ export default function TodosPage() {
   }, [todos, isLoaded]);
 
   /**
+   * Restore scroll position after todos change
+   */
+  useEffect(() => {
+    if (unscheduledScrollRef.current) {
+      if (savedScrollPos.current === -1) {
+        // Scroll to bottom for newly added items
+        unscheduledScrollRef.current.scrollTop = unscheduledScrollRef.current.scrollHeight;
+        savedScrollPos.current = 0; // Reset
+      } else if (savedScrollPos.current > 0) {
+        // Restore previous position
+        unscheduledScrollRef.current.scrollTop = savedScrollPos.current;
+      }
+    }
+  }, [todos]);
+
+  /**
    * Add a new todo
    */
   const addTodo = (e: React.FormEvent) => {
@@ -97,6 +117,9 @@ export default function TodosPage() {
       order: unscheduledCount, // Add to end of unscheduled list
     };
 
+    // Mark to scroll to bottom for newly added item
+    savedScrollPos.current = -1;
+
     setTodos([...todos, newTodo]);
     setInputValue("");
   };
@@ -105,6 +128,11 @@ export default function TodosPage() {
    * Toggle todo completion status
    */
   const toggleTodo = (id: number) => {
+    // Save scroll position before updating
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+
     setTodos(
       todos.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
@@ -116,6 +144,11 @@ export default function TodosPage() {
    * Delete a todo
    */
   const deleteTodo = (id: number) => {
+    // Save scroll position before deleting
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+
     const todoToDelete = todos.find((t) => t.id === id);
     if (!todoToDelete) return;
 
@@ -160,6 +193,11 @@ export default function TodosPage() {
    * Edit a todo's title
    */
   const editTodo = (id: number, newTitle: string) => {
+    // Save scroll position before editing
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+
     setTodos(
       todos.map((todo) =>
         todo.id === id ? { ...todo, title: newTitle } : todo
@@ -204,6 +242,11 @@ export default function TodosPage() {
     const { active, over } = event;
 
     if (!over) return;
+
+    // Save scroll position before updating todos
+    if (unscheduledScrollRef.current) {
+      savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
 
     const activeId = active.id.toString();
     const overId = over.id.toString();
@@ -251,6 +294,9 @@ export default function TodosPage() {
     if (dropTarget === "unscheduled") {
       const unscheduledCount = todos.filter((t) => !t.deadline).length;
       const sourceDeadline = activeTodo?.deadline;
+
+      // Mark to scroll to bottom for newly dragged-in item
+      savedScrollPos.current = -1;
 
       // Move todo to unscheduled
       let updatedTodos = todos.map((todo) =>
@@ -383,7 +429,10 @@ export default function TodosPage() {
             </button>
           )}
         </div>
-        <div className="space-y-2 pointer-events-auto h-60 overflow-y-auto">
+        <div
+          ref={unscheduledScrollRef}
+          className="space-y-2 pointer-events-auto h-60 overflow-y-auto"
+        >
           {unscheduledTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
               No unscheduled todos. Drag todos from the calendar to unschedule them.
