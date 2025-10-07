@@ -168,6 +168,20 @@ export default function TodosPage() {
   };
 
   /**
+   * Clear all unscheduled todos
+   */
+  const clearUnscheduledTodos = () => {
+    setTodos(todos.filter((todo) => todo.deadline !== undefined));
+  };
+
+  /**
+   * Clear all todos for the selected date
+   */
+  const clearSelectedDayTodos = () => {
+    setTodos(todos.filter((todo) => todo.deadline !== selectedDate));
+  };
+
+  /**
    * Handle drag end - update todo deadline or reorder
    */
   const handleDragEnd = (event: DragEndEvent) => {
@@ -339,9 +353,20 @@ export default function TodosPage() {
           isOver ? "bg-blue-50 border-2 border-blue-400" : "bg-transparent"
         }`}
       >
-        <h3 className="text-lg font-semibold text-gray-700 mb-3 pointer-events-none">
-          Unscheduled Todos ({unscheduledTodos.length})
-        </h3>
+        <div className="flex items-center justify-between mb-3 pointer-events-none">
+          <h3 className="text-lg font-semibold text-gray-700">
+            Unscheduled Todos ({unscheduledTodos.length})
+          </h3>
+          {unscheduledTodos.length > 0 && (
+            <button
+              onClick={clearUnscheduledTodos}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors pointer-events-auto"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="space-y-2 pointer-events-auto h-60 overflow-y-auto">
           {unscheduledTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg pointer-events-none">
@@ -373,9 +398,19 @@ export default function TodosPage() {
 
     return (
       <div className="p-3 rounded-lg bg-transparent">
-        <h3 className="text-lg font-semibold text-gray-700 mb-3">
-          {dateLabel}&apos;s Todos ({selectedDayTodos.length})
-        </h3>
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-lg font-semibold text-gray-700">
+            {dateLabel}&apos;s Todos ({selectedDayTodos.length})
+          </h3>
+          {selectedDayTodos.length > 0 && (
+            <button
+              onClick={clearSelectedDayTodos}
+              className="text-sm text-red-600 hover:text-red-700 transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
         <div className="space-y-2 h-60 overflow-y-auto">
           {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
