@@ -38,6 +38,10 @@ export default function TodosPage() {
   const unscheduledScrollRef = useRef<HTMLDivElement>(null);
   const savedScrollPos = useRef<number>(0);
 
+  // Ref to preserve scroll position in selected day's todos
+  const selectedDayScrollRef = useRef<HTMLDivElement>(null);
+  const savedSelectedDayScrollPos = useRef<number>(0);
+
   /**
    * Load todos from localStorage on mount and when window regains focus
    */
@@ -99,6 +103,11 @@ export default function TodosPage() {
         unscheduledScrollRef.current.scrollTop = savedScrollPos.current;
       }
     }
+
+    // Restore scroll position for selected day's todos
+    if (selectedDayScrollRef.current && savedSelectedDayScrollPos.current > 0) {
+      selectedDayScrollRef.current.scrollTop = savedSelectedDayScrollPos.current;
+    }
   }, [todos]);
 
   /**
@@ -132,6 +141,9 @@ export default function TodosPage() {
     if (unscheduledScrollRef.current) {
       savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
     }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
+    }
 
     setTodos(
       todos.map((todo) =>
@@ -147,6 +159,9 @@ export default function TodosPage() {
     // Save scroll position before deleting
     if (unscheduledScrollRef.current) {
       savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
     }
 
     const todoToDelete = todos.find((t) => t.id === id);
@@ -196,6 +211,9 @@ export default function TodosPage() {
     // Save scroll position before editing
     if (unscheduledScrollRef.current) {
       savedScrollPos.current = unscheduledScrollRef.current.scrollTop;
+    }
+    if (selectedDayScrollRef.current) {
+      savedSelectedDayScrollPos.current = selectedDayScrollRef.current.scrollTop;
     }
 
     setTodos(
@@ -476,7 +494,10 @@ export default function TodosPage() {
             </button>
           )}
         </div>
-        <div className="space-y-2 h-60 overflow-y-auto">
+        <div
+          ref={selectedDayScrollRef}
+          className="space-y-2 h-60 overflow-y-auto"
+        >
           {selectedDayTodos.length === 0 ? (
             <p className="text-gray-500 text-center py-8 bg-gray-50 rounded-lg">
               No todos scheduled for {dateLabel.toLowerCase()}.
