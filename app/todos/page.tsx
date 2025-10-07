@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { DndContext, DragEndEvent, useDroppable, DragOverEvent, pointerWithin } from "@dnd-kit/core";
 import { SortableContext, arrayMove, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { startOfWeek, format } from "date-fns";
+import { startOfWeek, format, addDays } from "date-fns";
 import WeeklyCalendar from "@/components/WeeklyCalendar";
 import SortableTodoItem from "@/components/SortableTodoItem";
 import StaticTodoItem from "@/components/StaticTodoItem";
@@ -254,6 +254,54 @@ export default function TodosPage() {
   };
 
   /**
+   * Postpone uncompleted todos from today to tomorrow
+   */
+  const postponeToTomorrow = () => {
+    const today = format(new Date(), "yyyy-MM-dd");
+    const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
+
+    // Get uncompleted todos from today
+    const uncompletedTodayTodos = todos.filter(
+      (todo) => todo.deadline === today && !todo.completed
+    );
+
+    if (uncompletedTodayTodos.length === 0) return;
+
+    // Get tomorrow's existing todo count for proper order assignment
+    const tomorrowCount = todos.filter((t) => t.deadline === tomorrow).length;
+
+    // Move uncompleted todos to tomorrow
+    let updatedTodos = todos.map((todo) => {
+      const uncompletedIndex = uncompletedTodayTodos.findIndex((t) => t.id === todo.id);
+      if (uncompletedIndex !== -1) {
+        return {
+          ...todo,
+          deadline: tomorrow,
+          order: tomorrowCount + uncompletedIndex,
+        };
+      }
+      return todo;
+    });
+
+    // Renumber remaining today's todos (completed ones)
+    const remainingTodayTodos = updatedTodos
+      .filter((t) => t.deadline === today)
+      .sort((a, b) => a.order - b.order);
+
+    const todayOrderMap = new Map(
+      remainingTodayTodos.map((todo, index) => [todo.id, index])
+    );
+
+    updatedTodos = updatedTodos.map((todo) =>
+      todayOrderMap.has(todo.id)
+        ? { ...todo, order: todayOrderMap.get(todo.id)! }
+        : todo
+    );
+
+    setTodos(updatedTodos);
+  };
+
+  /**
    * Handle drag end - update todo deadline or reorder
    */
   const handleDragEnd = (event: DragEndEvent) => {
@@ -485,14 +533,24 @@ export default function TodosPage() {
           <h3 className="text-lg font-semibold text-gray-700">
             {dateLabel}&apos;s Todos ({selectedDayTodos.length})
           </h3>
-          {selectedDayTodos.length > 0 && (
-            <button
-              onClick={clearSelectedDayTodos}
-              className="text-sm text-red-600 hover:text-red-700 transition-colors"
-            >
-              Clear
-            </button>
-          )}
+          <div className="flex gap-2">
+            {isToday && selectedDayTodos.some((todo) => !todo.completed) && (
+              <button
+                onClick={postponeToTomorrow}
+                className="text-sm text-amber-600 hover:text-amber-700 transition-colors"
+              >
+                Postpone
+              </button>
+            )}
+            {selectedDayTodos.length > 0 && (
+              <button
+                onClick={clearSelectedDayTodos}
+                className="text-sm text-red-600 hover:text-red-700 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
         <div
           ref={selectedDayScrollRef}
