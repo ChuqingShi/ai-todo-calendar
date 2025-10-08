@@ -57,7 +57,7 @@ Now, instead of wrestling with planners that don’t fit my workflow, I’ve bui
 
 
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 - **Framework**: Next.js 15 with App Router
 - **Language**: TypeScript
@@ -69,6 +69,7 @@ Now, instead of wrestling with planners that don’t fit my workflow, I’ve bui
 
 
 ## 📝 Roadmap for AI Features
+
 Planned enhancements include:
 - 🗣️ **Natural language todo creation** “I need to call mom two days later” -> adds "call mom" on specified date  
 - 📊 **Habit-based scheduling suggestions** - Notices you often do shopping on Saturdays → suggests Saturday for "buy groceries"
