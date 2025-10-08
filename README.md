@@ -1,24 +1,28 @@
 # AI Todo Calendar
 
-> A user-friendly todo + calendar app with **drag-and-drop scheduling** and **smart automation**, built together with Claude Code.  
-> *(Future updates will include AI-powered task recommendations and natural language input.)*
+> A user-friendly todo + calendar app with **drag-and-drop scheduling** and **smart automation**, built together with Claude Code.
+>
+> *Future updates will include AI-powered task recommendations and natural language input.*
 
 
 
-## 🎥 Demo Video  
-Check out the app in action:
-
-https://github.com/user-attachments/assets/b29d74e4-2863-404a-bc8d-1bb9b8db6032
+## 🎬 Demo
+**[Try it LIVE!](https://ai-todo-calendar-lk01ljxyo-chuqings-projects.vercel.app/todos)** or **[Watch it in ACTION!](https://github.com/user-attachments/assets/b29d74e4-2863-404a-bc8d-1bb9b8db6032)**
 
 
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Node.js 18+
-- Package manager, for example **npm**
+### Try It Online
+Visit the [live demo](https://ai-todo-calendar-lk01ljxyo-chuqings-projects.vercel.app/todos). No installation needed!
 
-### Installation and Run
+### Run Locally
+
+#### Prerequisites
+- Node.js 18.18+
+- Package manager, like **npm**
+
+#### Install and Run
 1. Clone the repository:
 ```bash
 git clone https://github.com/ChuqingShi/ai-todo-calendar.git && cd ai-todo-calendar
@@ -29,16 +33,22 @@ git clone https://github.com/ChuqingShi/ai-todo-calendar.git && cd ai-todo-calen
 npm install
 ```
 
-3. Build and start the app:
+3. Run the development server:
+```bash
+npm run dev
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+#### Build for Production
+
 ```bash
 npm run build && npm start
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser 🎉
 
 
-
-## 🌱 My Journey to Building This App  
+## 🌱 My Journey Building This App  
 
 I used to buy **weekly planner books** all the time, and every single one left me **frustrated**. The pages always got overcrowded, todos spilled over, and I felt boxed in.  So I tried to design my own paper planner. It was better… but still not the best.  
 
@@ -59,20 +69,29 @@ Now, instead of wrestling with planners that don’t fit my workflow, I’ve bui
 
 ## 🛠️ Tech Stack
 
-- **Framework**: Next.js 15 with App Router
+- **Framework**: Next.js 15 (using the App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
 - **Drag & Drop**: @dnd-kit
 - **Calendar**: FullCalendar
 - **Date Utilities**: date-fns
+- **Deployment**: Vercel
 
 
 
-## 📝 Roadmap for AI Features
+## 📝 Roadmap for Future
 
-Planned enhancements include:
-- 🗣️ **Natural language todo creation** “I need to call mom two days later” -> adds "call mom" on specified date  
-- 📊 **Habit-based scheduling suggestions** - Notices you often do shopping on Saturdays → suggests Saturday for "buy groceries"
-- 🤖 **Smart Scheduling Assistant** - Sees you have many tasks on Monday → suggests spreading some to Tuesday
-- ☁️ **Cloud sync for cross-device use**
+### Core Features
+- ☁️ **Cross-Device Support & Cloud Sync**  
+  Enable tasks to sync seamlessly across browsers and devices.
+
+### AI Features
+- 🗣️ **Natural language todo creation**  
+  Example: “I need to call mom two days later” → adds "call mom" on the specified date  
+
+- 📊 **Habit-based scheduling suggestions**  
+  Notices you often shop on Saturdays → suggests Saturday for "buy groceries"  
+
+- 🤖 **Smart Scheduling Assistant**  
+  Detects overloaded days (e.g., Friday) → suggests spreading tasks across the week  
 
