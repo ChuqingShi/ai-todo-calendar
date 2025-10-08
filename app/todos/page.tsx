@@ -261,9 +261,9 @@ export default function TodosPage() {
     const tomorrow = format(addDays(new Date(), 1), "yyyy-MM-dd");
 
     // Get uncompleted todos from today
-    const uncompletedTodayTodos = todos.filter(
-      (todo) => todo.deadline === today && !todo.completed
-    );
+    const uncompletedTodayTodos = todos
+      .filter((todo) => todo.deadline === today && !todo.completed)
+      .sort((a, b) => a.order - b.order);
 
     if (uncompletedTodayTodos.length === 0) return;
 
